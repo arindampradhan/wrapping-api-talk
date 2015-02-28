@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Python wrapping a Json API</title>
+
+		<meta name="description" content="Python wrapping a Json API">
+		<meta name="author" content="Arindam Pradhan">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/simple.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+		<link rel="stylesheet" href="css/custom.css">
+		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+		<script>
+			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+		<style>
+		#bl{
+			background-color: black;
+			color: white;
+		}
+		</style>
+	</head>
+
+	<body>
+
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h2>Python wrapping a json api</h2>
+				</section>
+				<section>
+					<h1 align="left">I am </h1>
+					<br>
+					<div></div>
+					<div align="left">
+					twitter <a href="http://twitter.com/rrindam">@rrindam</a>
+					<br><br>
+					github <a href="http://github.com/arindampradhan">arindampradhan</a>
+					<br><br>
+					www <a href="http://arindam2u.com">arindam2u</a>
+					</div>
+				</section>
+                <section>
+                    <h2>Overview </h2>
+                    <p>Wrapping an api means representing the data in a structured manner in a particular language.</p>
+                    <p>By structured manner, we do not mean only json or xml. But rather class objects and models in python. 
+                    </p>
+                    <br>
+                    <h3>How does it help?</h3>
+                    <p>It helps extend logic in the code and build apps on top of them very easily.</p>
+                </section>
+                <section>
+                    <h2>
+                    <img src="./img/json.png" alt="">
+                    </h2>
+                    <h2>Tools: </h2>
+                    <ul>
+                    	<li><a href="https://github.com/jakubroztocil/httpie">httpie</a></li>
+                    	<li><a href="https://github.com/kennethreitz/requests">python requests</a></li>
+                    	<li><a href="https://chrome.google.com/webstore/detail/insomnia-rest-client/gmodihnfibbjdecbanmpmbmeffnmloel?hl=en">insomnia rest (chrome extension)</a></li>
+						<hr>
+                    	<li>Curl</li>
+                    </ul>
+                </section>
+                <section>
+                	Data are usually available in xml or json 
+                	<img src="http://www.auroraedialliance.com/Portals/126065/images/JsonXmlResults.png" alt="source from auroraedialliance">
+                </section>
+                <section>
+                	OR html
+                	<img src="http://www.auroraedialliance.com/Portals/126065/images/JsonXmlResults.png" alt="random html">
+                </section>                
+				<section>
+					<h3>Lets start with defining a model for a user in hacker news</h3>
+					<pre>
+						<code class="python">
+							class User(object):
+
+							    """Represents a user in hacker news"""
+
+							    def __init__(self, id, created, karma, avg, about):
+							        self.id = id
+							        self.created = created
+							        self.karma = karma
+							        self.avg = avg
+							        self.about = about
+							
+							..
+
+							# method to intialize the user 
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h4>Lets define a get method which wraps the user for us.</h4>
+					<hr>	
+					<h4>Example url: https://news.ycombinator.com/user?id=jl</h4>
+					<pre>
+						<code class="python">
+						# User model ..
+
+						@classmethod
+						def get(self, user_id):
+						    # scraping the data out of web
+						    
+						    USER_URL = HACKER_NEWS_URL + "user?id={}".format(user_id)
+						    page_html = requests.get(USER_URL).text
+						    soup = BeautifulSoup(page_html)
+						    form = soup.find('form', {'method': 'post', 'action': '/x'})
+						    content = form.find('table')
+						    tr = content.findAll('tr')
+
+						    user = tr[0].findAll('td')[1].string
+						    created = tr[1].findAll('td')[1].string
+						    karma = int(tr[2].findAll('td')[1].string)
+						    avg = float(tr[3].findAll('td')[1].string)
+						    about = tr[4].findAll('td')[1].string
+						    return User(id=user, created=created, karma=karma, avg=avg, about=about)
+
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Use the api we just created .. </h2>
+					<pre>
+						<code class="python">
+						# lets get the data in json format
+						    >>> from models import User
+						    >>> user = User.get('jl')
+							    >>> user
+							    &ltUser ID:jl&gt
+							    >>> print user.__dict__
+
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>More data</h2>
+					<p>Lets scrape producthunt - simlar to HN. <br> Lists trending products and startups.</p>
+					<hr>
+					Example url: http://producthunt.com
+					<p><strong>Things we need to consider ...</strong></p>
+					<ul class="fragment">
+						<li>What models do we need ?</li>
+						<li>How much data we can get per request ?</li>
+						<li>How to design our class methods ?</li>
+					</ul>
+				</section>
+				<section>
+					<h3>Lets create a model for product</h3>
+					<h4>This represents a single post in the list of products from the website.</h4>
+					<pre>
+					<code class="python">
+						class Product(object):
+
+						    """Represents a product from the front page of the product"""
+
+						    def __init__(self, id, upvote, title, link, tagline):
+						        self.id = id
+						        self.upvote = upvote
+						        self.title = title
+						        self.link = link
+						        self.tagline = tagline
+
+						    def __repr__(self):
+						        return "&ltPRODUCT ID:{}&gt".format(self.id)
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h3>PH represents product hunt </h3>
+					<h4>The PH api will list all product object from the website.</h4>
+					<pre>
+					<code class="python">
+						class PH(object):
+
+						    def __init__(self):
+						        self.anything = []
+
+						    @classmethod
+						    def an_api_method(self):
+						        page_html = requests.get(PAGE_URL).text
+						        soup = BeautifulSoup(page_html)
+						        content = soup.find('div', class_='main-content')
+						        products_html = content.findAll('li', class_='post')
+						        products = []
+						        for product_html in products_html:
+						            id = product_html.find('div',class_="upvote")['data-vote-id']
+						            try:
+						                upvote = int(
+						                    product_html.find('span', class_="vote-count").string)
+						            except:
+						                upvote = None
+						            url = product_html.find('div', class_="url").a['href']
+						            link = PAGE_URL + url
+						            tagline = product_html.find('span', class_="post-tagline description").string
+						            title = product_html.find('div', class_="url").a.string
+						            p = Product(id=id, upvote=upvote, title=title, link=link, tagline=tagline)
+						            products.append(p)
+						        return products
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Lets Use the api </h2>
+					<pre>
+						<code class="python">
+							>>> from models import PH
+							>>> products = PH.an_api_method()
+							>>> for product in products[:10]:
+							        print 'title:{0}    upvotes:{1}'.format(product.title, product.upvote)
+							        print 'tagline:', product.tagline
+							        print "link:", product.link
+							        print '---'
+
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Scraping disadvantages...</h2>
+					<ul>
+						<li>Most of the website have broken html</li>
+						<li>The html of the website changes often which causes breaking of code.</li>
+					</ul>
+					<br><br>
+					<div class="fragment">
+					<h2>Json wrapping</h2>
+					<p>
+						Wrapping a json api is a better option because they are consistant.
+					</p>
+					<p>
+						We don't need to use any scraping library and the api does not break very often. Most of the time we get official stuffs. 
+					</p>
+					</div>
+				</section>
+				<section>
+					<h3>Access a data from a json object in python.</h3>
+					<p>
+						<pre>
+						a_json_object = 
+						{
+							"object_a":"data stored in any type",
+							"object_b":[1,2],
+							"object_c":{ 'a':1.23 } 
+						}
+						</pre>
+						<pre>
+						<code class="python">
+							# access object_a
+							>>> a_json_object['object_a'] # "data stored in any type" 
+							# access object_b
+							>>> a_json_object['object_b'][0] # 1
+							# access object_c
+							>>> a_json_object['object_c']['a'] # 1.23
+						</code>
+						</pre>
+					</p>
+				</section>
+				<section>
+					<h3>Things we need to consider while wrapping json api.</h3>
+					<p></p>
+					<pre>
+					<code > 
+					/* simple api call */
+					https://api.coursera.org/api/catalog.v1/courses/2 
+					
+					/* api call to get certain fields */
+					https://api.coursera.org/api/catalog.v1/courses?fields=language,shortDescription
+					
+					/* not a simple api call */
+					https://api.coursera.org/api/catalog.v1/categories?id=1&fields=name,shortName&includes=courses
+					
+					/* complicated api call */
+					https://api.coursera.org/api/catalog.v1/categories?id=1&fields=name,courses.fields(photo,universityLogo,language)&includes=courses
+					</code>
+					</pre>
+					How to wrap a complicated call to an API.
+					<p><h4>https://api.coursera.org/api/catalog.v1/categories?id=1&fields=name,courses.fields(photo,universityLogo,language)&includes=courses</h4></p>
+				</section>
+				<section>
+					<hgroup>
+					  <h2></h2>
+					</hgroup>
+					<article>
+					<h3>Let's wrap this json</h3>
+				<pre>
+					<code>
+					class course(object):
+
+					    """represents a course"""
+
+					    def __init__(self, id, shortName, name, largeIcon, photo, previewLink, shortDescription, smallIcon, smallIconHover, subtitleLanguagesCsv, isTranslate):
+					        self.id = id
+					        self.shortName = shortName
+					        self.name = name
+					        self.largeIcon = largeIcon
+					        self.photo = photo
+					        self.previewLink = previewLink
+					        self.shortDescription = shortDescription
+					        self.smallIcon = smallIcon
+					        self.smallIconHover = smallIconHover
+					        self.subtitleLanguagesCsv = subtitleLanguagesCsv
+					        self.isTranslate = isTranslate
+					</code>
+				</pre>
+				<p>
+					Well the initialization could be more pythonoic.
+					Lets design an api that could be more pythonic and accepts 
+					any json data and initializes the attributes by itself.
+				</p>
+				</section>
+				<section>
+				<pre>
+					<code class="python">
+						class course(object):
+
+						    """represents a course"""
+
+						    def __init__(self, *initial_data, **kwargs):
+
+						        includes = ['id', 'aboutTheInstructor', 'aboutTheCourse']
+						        for dictionary in initial_data:
+						            for key in dictionary:
+						                if key in includes:
+						                    setattr(self, key, dictionary[key])
+						        for key in kwargs:
+						            if key in includes:
+						                setattr(self, key, kwargs[key])
+					</code>
+				</pre>
+				<p>
+					This class will accept any json data or list and initialize it's key with the attributes of the class.
+					Works like a generic model.
+				</p>
+				<p>In <span style="color:red">includes</span> we can set the keys of the api we need in the class method.</p>
+				</section>
+				<section>
+				<h3>The class method for initializing the Course object</h3>
+				<pre>
+					<code class="python">
+						# class method for the Course object  
+					    @classmethod
+					    def get_course_by_id(self, course_id):
+					        url = 'https://api.coursera.org/api/catalog.v1/courses?id={}&fields=id,shortName,name,language\
+					        ,largeIcon,photo,previewLink,shortDescription,smallIcon,smallIconHover,subtitleLanguagesCsv,isTranslate,universityLogo,universityLogoSt,video,videoId,aboutTheCourse,targetAudience,faq,courseSyllabus,courseFormat,suggestedReadings,instructor,estimatedClassWorkload,aboutTheInstructor,recommendedBackground'.format(course_id)
+					        course_json = requests.get(url).json()
+					        course_json = course_json['elements'][0]
+					        course_obj = Course(course_json)
+					        return course_obj
+					</code>
+				</pre>
+				</section>
+				<section>
+				<h3>Let's get the serialized data</h3>
+				<pre>
+					<code class="python">
+						# Let's get the code in action
+						    [1]: from models import Course
+						    [2]: course = Course.get_course_by_id(12)
+							    [3]: course
+							    &ltCourse ID:12&gt
+					</code>
+				</pre>
+				</section>
+				<section>
+					<h2>Got the basics covered, let's dive deep </h2>
+					<ul >
+					<li>
+						Let's design a full fledged API that wrap's the Hacker News API from firebase   
+					</li>
+					<li>
+						<span id="bl">URL = <a href="https://github.com/HackerNews/API" id="bl">https://github.com/HackerNews/API</a></span>
+					</li>
+					</ul>
+				</section>
+				<section>
+					Design a API wrapper
+					<pre>
+					<br>
+						yaaHN
+						|-- error.py
+						|-- helpers.py
+						|-- HN_client.py
+						|-- __init__.py
+						|
+						|-- models
+						|   |
+						|   |-- comment.py
+						|   |-- deleted.py
+						|   |-- __init__.py
+						|   |-- item.py
+						|   |-- poll.py
+						|   |-- story.py
+						|   |-- update.py
+						|   `-- user.py
+						`-- thread_request.py
+					</pre>
+				</section>
+				<section>
+					https://hacker-news.firebaseio.com/v0/user/jl.json?print=pretty
+					<pre>
+					{
+					  "about" : "This is a test",
+					  "created" : 1173923446,
+					  "delay" : 0,
+					  "id" : "jl",
+					  "karma" : 2937,
+					  "submitted" : [ 8265435, 8168423, 8090946, 8090326, 7699907, ... ]
+					}
+					</pre>
+					yaaHN/models/user.py
+					<pre>
+						<code class="python">
+							class User(object):
+
+							    """class for User"""
+
+							    def __init__(self, id, delay, created, karma, about, submitted):
+							        self.id = id
+							        self.delay = delay
+							        self.created = created
+							        self.karma = karma
+							        self.about = about
+							        self.submitted = submitted
+						</code>
+					</pre>
+				</section>
+				<section>
+					https://hacker-news.firebaseio.com/v0/item/160705.json
+					<pre>
+						{
+						  "by" : "pg",
+						  "id" : 160705,
+						  "parent" : 160704,
+						  "score" : 335,
+						  "text" : "Yes, ban them; I'm  ....",
+						  "time" : 1207886576,
+						  "type" : "pollopt"
+						}
+					</pre>
+					yaaHN/models/poll.py
+					<pre>
+						<code class="python">
+						class Poll(object):
+
+						    def __init__(self, id, by, kids, parts, score, text, time, title, type):
+						        self.id = id
+						        self.by = by
+						        self.kids = kids
+						        self.parts = parts
+						        self.score = score
+						        self.text = text
+						        self.time = time
+						        self.title = title
+						        self.type = type
+						</code>
+					</pre>
+				</section>
+				<section>
+					https://hacker-news.firebaseio.com/v0/item/160705.json
+					<pre>
+						{
+						  "by" : "pg",
+						  "id" : 160705,
+						  "parent" : 160704,
+						  "score" : 335,
+						  "text" : "Yes, ban them; I'm  ....",
+						  "time" : 1207886576,
+						  "type" : "pollopt"
+						}
+					</pre>
+					yaaHN/models/poll.py
+					<pre>
+						<code class="python">
+						class Poll(object):
+
+						    def __init__(self, id, by, kids, parts, score, text, time, title, type):
+						        self.id = id
+						        self.by = by
+						        self.kids = kids
+						        self.parts = parts
+						        self.score = score
+						        self.text = text
+						        self.time = time
+						        self.title = title
+						        self.type = type
+						</code>
+					</pre>
+				</section>
+				<section>
+					Let's start writing helper function which help us parse those json objects to the corresponding class objects or models in other files yaaHN/helpers.py
+				</section>
+				<section>
+				yaaHN/helpers.py
+					<pre>
+						<code class="python">
+					def user_parser(user):
+					    """
+					    Parses a user object
+					    """
+					    return User(
+					        user['id'],
+					        user['delay'],
+					        user['created'],
+					        user['karma'],
+					        user['about'],
+					        user['submitted'],
+					    )
+						</code>
+					</pre>
+				</section>
+				<section>
+					yaaHN/helpers.py
+					<pre>
+						<code class="python">
+						def poll_parser(poll):
+						    """
+						    Parses a poll object
+						    """
+						    return Poll(
+						        poll['id'],
+						        poll['by'],
+						        __check_key('kids', poll),  # poll and pollopt differ this property
+						        __check_key('parts', poll),  # poll and pollopt differ this property
+						        poll['score'],
+						        poll['text'],
+						        poll['time'],
+						        poll['title'],
+						        poll['type'],
+						    )
+						</code>
+					</pre>
+				</section>
+				<section>
+					Writing a client that handels all your methods and models yaaHN/HN_client.py
+					<pre>
+					<code class="python">
+						class hn_client(object):
+
+						    """client tool for hacker news"""
+
+						    def __init__(self):
+						        self.more = ""
+
+						    @classmethod
+						    def get_user(self, id):
+						        """
+						        Get a user object from the given user id
+						        """
+						        response = request_user(id)
+						        return user_parser(response)
+
+						    @classmethod
+						    def get_poll(self, id):
+						        """
+						        Get a poll object from the given item id
+						        """
+						        response = request_item(id)
+						        return poll_parser(response)						
+					</code>
+					</pre>
+				</section>
+				<section>
+				Use the api you just created <br>	 
+				Or the client you just created. <br>
+				Using hn_client
+				<pre>
+				<code class="python">
+					>>> from yaaHN import hn_client
+					>>> hn_client.get_user('jl')
+						&ltUser ID:jl&gt
+					>>> hn_client.get_poll(160705)
+						&ltPoll ID:160705&gt
+				</code>
+				</pre>
+				</section>
+				<section>
+					<img src="https://raw.githubusercontent.com/arindampradhan/mockHN/master/mock_hn.png" alt="mock_hn">
+				</section>
+				<section>
+					Thank You for your patience !!
+					Keep coding :)
+				</section>
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				slideNumber: true,
+
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+		</script>
+	</body>
+</html>
